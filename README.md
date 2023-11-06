@@ -1,7 +1,7 @@
 Simple expression transformer inspired by [Coq](https://github.com/coq/coq) and [Noq](https://github.com/tsoding/Noq). 
 
 > **Important**
-> For mor information refer [wiki](https://github.com/Hyouteki/sock/wiki)
+> For more information refer [wiki](https://github.com/Hyouteki/sock/wiki)
 
 ## Quick Start
 ``` console
