@@ -14,7 +14,6 @@
 typedef enum {
     WALRUS,
     EQUAL,
-    RULE,
     TEXT
 } Token_Type;
 
@@ -29,6 +28,7 @@ typedef struct Statement {
     std::vector<Token> tokens;
 public:
     void print() const;
+    std::string tostr() const;
     bool match(const std::vector<Token_Type>) const;
 } Statement;
 
@@ -45,6 +45,13 @@ void Statement::print() const {
     }
 }
 
+std::string Statement::tostr() const {
+    std::string str = "";
+    for (Token token: this->tokens)
+        str += token.str + " ";
+    return str;
+}
+
 bool Statement::match(const std::vector<Token_Type> pattern) const {
     if (this->tokens.size() != pattern.size()) return false;
     for (size_t i = 0; i < this->tokens.size(); ++i)
@@ -53,12 +60,20 @@ bool Statement::match(const std::vector<Token_Type> pattern) const {
 }
 
 std::string filename = "sock.soq";
-std::unordered_map<std::string, Rule> rulebook;
-std::unordered_map<std::string, Token_Type> symbol_type_map = {{"rule", RULE}};
+std::unordered_map<std::string, Rule*> rulebook;
+std::unordered_map<std::string, Token_Type> symbol_type_map = {};
 std::unordered_set<char> special_chars = {'=', ':'};
 
 void print(std::vector<std::string> lines) {
     for (std::string line: lines) std::cout << line << std::endl;
+}
+
+void print_rulebook() {
+    for (auto x: rulebook) {
+        std::cout << x.first << " :: ";
+        x.second->print(); 
+        std::cout << std::endl;
+    }
 }
 
 std::vector<std::string> read_file() {
@@ -94,7 +109,8 @@ Statement parse_statement(const std::string line) {
                     tokens.push_back((Token){.type = WALRUS, .str = ":="});
                     break;
                 } else {
-                    std::cerr << "SYNTAX ERROR" << std::endl;
+                    std::cerr << line << std::endl;
+                    std::cerr << "^^^ SYNTAX ERROR:: Not a valid token" << std::endl;
                     exit(1);
                 }
             } 
@@ -111,7 +127,7 @@ Statement parse_statement(const std::string line) {
     return (Statement){.tokens = tokens};
 }
 
-Expr parse_expr(std::string str) {
+Expr* parse_expr(std::string str) {
     std::stack<std::pair<Expr, bool>> stk;
     std::string pre = "";
     for (wchar_t ch: str) {
@@ -153,31 +169,51 @@ Expr parse_expr(std::string str) {
                     break;
                 }
                 default:
-                    std::cerr << "Invalid syntax >> " << str << std::endl;
+                    std::cerr << str << std::endl;
+                    std::cerr << "^^^ INVALID EXPR" << std::endl;
                     return {};
             }
             pre = "";
         }
     }
-    return (stk.empty())? (Expr){.type = Sym, .name = pre, .args = {}}: stk.top().first;
+    if (stk.empty()) {
+        Expr* tmp = new Expr();
+        tmp->type = Sym;
+        tmp->name = pre;
+        tmp->args = {};
+        return tmp;
+    } else {
+        Expr* tmp = new Expr(stk.top().first);
+        return tmp;
+    };
 }
 
 void execute_rule(const Statement statement) {
-    Expr left_expr = parse_expr(statement.tokens[2].str);
-    Expr right_expr = parse_expr(statement.tokens[4].str);
-    Rule rule = (Rule){.left = &left_expr, .right = &right_expr};
-    rule.print(); std::cout << std::endl;
+    std::string name = statement.tokens[0].str;
+    Expr* left_expr = parse_expr(statement.tokens[2].str);
+    Expr* right_expr = parse_expr(statement.tokens[4].str);
+    Rule* rule = new Rule();
+    rule->left = left_expr;
+    rule->right = right_expr;
+    rulebook[name] = rule;
 }
 
 void execute_statement(const Statement statement) {
     if (statement.match(RULE_SYNTAX)) execute_rule(statement);
+    else {
+        std::cerr << statement.tostr() << std::endl;
+        std::cerr << "^^^ SYNTAX ERROR: Does not match any pattern" << std::endl;
+        exit(1);
+    }
 }
 
 int main(int argc, char* argv[]) {
     if (argc > 1) filename = std::string(argv[1]);
     std::vector<std::string> lines = read_file();
-    std::string statement_str = "swap := swap(pair(a, b)) = pair(b, a)";
-    Statement statement = parse_statement(statement_str);
-    execute_statement(statement);
+    for (std::string line: lines) {
+        Statement statement = parse_statement(line);
+        execute_statement(statement);   
+    }
+    print_rulebook();
     return 0;
 }

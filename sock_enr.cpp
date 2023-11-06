@@ -55,7 +55,7 @@ void Expr::print() const {
             std::cout << ")";
             break;
         default:
-            std::cerr <<  "Invalid Expr" << std::endl;
+            std::cerr <<  "Invalid Expr Type" << std::endl;
     }
 }
 
