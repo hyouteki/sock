@@ -59,6 +59,13 @@ void Expr::print() const {
     }
 }
 
+void print(const std::vector<Expr> exprs) {
+    for (Expr expr: exprs) {
+        expr.print();
+        std::cout << std::endl;
+    }
+}
+
 bool Expr::equal(const Expr* expr) const {
     if (expr == NULL || this->type != expr->type) return false;
     switch (this->type) {
@@ -160,6 +167,13 @@ void Rule::print() const {
     this->right->print();
 }
 
+void print(const std::vector<Rule> rules) {
+    for (Rule rule: rules) {
+        rule.print();
+        std::cout << std::endl;
+    }
+}
+
 void Rule::apply(Expr* expr) const {
     auto out = this->left->match(expr);
     if (!out) {
@@ -187,85 +201,85 @@ void print_bindings(std::unordered_map<std::string, Expr> bindings) {
     }
 }
 
-int main(int argc, char* argv[]) {   
-    Expr pair1 = {.type = Fun, .name = "pair", .args = {(Expr){Sym, "a", {}}, (Expr){Sym, "b", {}}}}; 
-    Expr pair2 = {.type = Fun, .name = "pair", .args = {(Expr){Sym, "b", {}}, (Expr){Sym, "a", {}}}}; 
-    Expr pair3 = {.type = Fun, .name = "pair", .args = {(Expr){Sym, "a", {}}, (Expr){Sym, "b", {}}}}; 
+// int main(int argc, char* argv[]) {   
+//     Expr pair1 = {.type = Fun, .name = "pair", .args = {(Expr){Sym, "a", {}}, (Expr){Sym, "b", {}}}}; 
+//     Expr pair2 = {.type = Fun, .name = "pair", .args = {(Expr){Sym, "b", {}}, (Expr){Sym, "a", {}}}}; 
+//     Expr pair3 = {.type = Fun, .name = "pair", .args = {(Expr){Sym, "a", {}}, (Expr){Sym, "b", {}}}}; 
     
-    pair1.print();
-    std::cout << std::endl;
+//     pair1.print();
+//     std::cout << std::endl;
     
-    std::cout << "pair1 == pair2: " << pair1.equal(&pair2) << std::endl;
-    std::cout << "pair1 == pair3: " << pair1.equal(&pair3) << std::endl;
+//     std::cout << "pair1 == pair2: " << pair1.equal(&pair2) << std::endl;
+//     std::cout << "pair1 == pair3: " << pair1.equal(&pair3) << std::endl;
     
-    std::cout << pair1.tostr() << std::endl;
+//     std::cout << pair1.tostr() << std::endl;
     
-    Expr swap = {.type = Fun, .name = "swap", .args = {pair1}};
-    Rule rule = {.left = &swap, .right = &pair2};
+//     Expr swap = {.type = Fun, .name = "swap", .args = {pair1}};
+//     Rule rule = {.left = &swap, .right = &pair2};
     
-    rule.print();
-    std::cout << std::endl;
+//     rule.print();
+//     std::cout << std::endl;
     
-    std::cout << pair1.name << " ~~ " << swap.name << ": " <<  std::endl;
-    auto out = pair1.match(&swap);
-    if (out) print_bindings(*out);
+//     std::cout << pair1.name << " ~~ " << swap.name << ": " <<  std::endl;
+//     auto out = pair1.match(&swap);
+//     if (out) print_bindings(*out);
     
-    Expr pairf = {
-        .type = Fun, 
-        .name = "pair", 
-        .args = {
-            (Expr){Fun, "f", {(Expr){Sym, "x", {}}}}, 
-            (Expr){Fun, "g", {(Expr){Sym, "x", {}}}}
-        }
-    }; 
-    Expr swap2 = {.type = Fun, .name = "swap", .args = {pairf}};
-    swap2.print();
-    std::cout << std::endl;
-    rule.apply(&swap2);
-    swap2.print();
-    std::cout << std::endl;
-    pairf.args[0].args[0].name = "y";
-    pairf.args[1].args[0].name = "y";
-    swap2 = {.type = Fun, .name = "swap", .args = {pairf}};
-    // swap2.print();
-    // std::cout << std::endl;
-    // rule.apply(&swap2);
-    // swap2.print();
-    // std::cout << std::endl;
-    Expr fun = {
-        .type = Fun, 
-        .name = "swap", 
-        .args = {
-            (Expr){
-                .type = Fun,
-                .name = "pair",
-                .args = {
-                    (Expr){
-                        .type = Fun,
-                        .name = "swap",
-                        .args = {
-                            (Expr){
-                                .type = Fun,
-                                .name = "pair",
-                                .args = {
-                                    (Expr){.type = Sym, .name = "a", .args = {}},
-                                    (Expr){.type = Sym, .name = "b", .args = {}}
-                                }
-                            }
-                        }
-                    }, 
-                    (Expr){.type = Sym, .name = "c", .args = {}}
-                }
-            }
-        }
-    };
-    fun.print();
-    std::cout << std::endl;
-    rule.apply_all(&fun);
-    fun.print();
-    std::cout << std::endl;
+//     Expr pairf = {
+//         .type = Fun, 
+//         .name = "pair", 
+//         .args = {
+//             (Expr){Fun, "f", {(Expr){Sym, "x", {}}}}, 
+//             (Expr){Fun, "g", {(Expr){Sym, "x", {}}}}
+//         }
+//     }; 
+//     Expr swap2 = {.type = Fun, .name = "swap", .args = {pairf}};
+//     swap2.print();
+//     std::cout << std::endl;
+//     rule.apply(&swap2);
+//     swap2.print();
+//     std::cout << std::endl;
+//     pairf.args[0].args[0].name = "y";
+//     pairf.args[1].args[0].name = "y";
+//     swap2 = {.type = Fun, .name = "swap", .args = {pairf}};
+//     // swap2.print();
+//     // std::cout << std::endl;
+//     // rule.apply(&swap2);
+//     // swap2.print();
+//     // std::cout << std::endl;
+//     Expr fun = {
+//         .type = Fun, 
+//         .name = "swap", 
+//         .args = {
+//             (Expr){
+//                 .type = Fun,
+//                 .name = "pair",
+//                 .args = {
+//                     (Expr){
+//                         .type = Fun,
+//                         .name = "swap",
+//                         .args = {
+//                             (Expr){
+//                                 .type = Fun,
+//                                 .name = "pair",
+//                                 .args = {
+//                                     (Expr){.type = Sym, .name = "a", .args = {}},
+//                                     (Expr){.type = Sym, .name = "b", .args = {}}
+//                                 }
+//                             }
+//                         }
+//                     }, 
+//                     (Expr){.type = Sym, .name = "c", .args = {}}
+//                 }
+//             }
+//         }
+//     };
+//     fun.print();
+//     std::cout << std::endl;
+//     rule.apply_all(&fun);
+//     fun.print();
+//     std::cout << std::endl;
     
-    return 0;
-}
+//     return 0;
+// }
 
 #endif // SOCK_SOCK_CPP_
