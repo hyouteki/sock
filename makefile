@@ -1,10 +1,10 @@
 .RECIPEPREFIX = +
 
 build:
-+ @g++ -std=c++17 interpreter.cpp -o interpreter
++ @g++ -std=c++17 src/interpreter.cpp -o bin/interpreter
 
 run:
-+ @./interpreter
++ @./bin/interpreter examples/sock.soq
 
 clean:
-+ @del /f *.o *.exe
++ @del /q "bin\*"

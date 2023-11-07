@@ -1,2 +1,0 @@
-swap := swap(pair(a, b)) = pair(b, a) 
-lim := lim(x, a, f(x)) = f(a) 
