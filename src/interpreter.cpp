@@ -266,7 +266,7 @@ void execute_shape(const Statement statement) {
         std::cerr << statement.tokens[8].str << "` is not valid" << std::endl;
         exit(1);
     }
-    if (name == "void") return;
+    if (name == "_") return;
     else exprbook[name] = expr;
 }
 
