@@ -12,14 +12,8 @@
 #include "sock_enr.cpp"
 
 typedef enum {
-    WALRUS,
-    EQUAL,
-    TEXT,
-    OPEN_CB,
-    CLOSE_CB,
-    PIPE,
-    MOD,
-    EXPR_MOD
+    WALRUS, EQUAL, TEXT, OPEN_CB, CLOSE_CB, PIPE, 
+    MOD, EXPR_MOD, KEYWORD, QUOTE, BACK_SLASH, ANY,
 } Token_Type;
 
 typedef struct Token {
@@ -38,7 +32,19 @@ public:
 } Statement;
 
 #define RULE_SYNTAX {TEXT, WALRUS, TEXT, EQUAL, TEXT}
-#define SHAPE_SYNTAX {TEXT, WALRUS, TEXT, OPEN_CB, TEXT, PIPE, EXPR_MOD, CLOSE_CB, MOD}
+#define SHAPE_SYNTAX {TEXT, WALRUS, TEXT, OPEN_CB, ANY, CLOSE_CB, MOD}
+#define IMPORT_SYNTAX {KEYWORD, QUOTE, TEXT, QUOTE}
+
+void print(const std::vector<std::string>);
+void print_rulebook();
+std::vector<std::string> read_file(const std::string);
+std::string tokenize_join(const std::string, const char);
+Statement parse_statement(const std::string);
+Expr* parse_expr(std::string);
+void execute_import(const Statement); 
+void execute_rule(const Statement);
+void execute_shape(const Statement);
+void execute_statement(const Statement);
 
 void Token::print() const {
     std::cout << this->type << "\t" << this->str;
@@ -46,7 +52,7 @@ void Token::print() const {
 
 void Statement::print() const {
     for (Token token: this->tokens) {
-        token.print();
+        token.print(); 
         std::cout << std::endl;
     }
 }
@@ -59,21 +65,25 @@ std::string Statement::tostr() const {
 }
 
 bool Statement::match(const std::vector<Token_Type> pattern) const {
-    if (this->tokens.size() != pattern.size()) return false;
-    for (size_t i = 0; i < this->tokens.size(); ++i)
+    if (this->tokens.size() < pattern.size()) return false;
+    size_t i = 0;
+    for (i; i < this->tokens.size() && pattern[i] != ANY; ++i)
         if (this->tokens[i].type != pattern[i]) return false;
+    for (size_t j = this->tokens.size()-1, k = pattern.size()-1; k > i; --j, --k) {
+        if (this->tokens[j].type != pattern[k]) return false;
+    }
     return true;
 }
 
-std::string filename = "sock.soq";
+std::vector<std::string> lines;
 std::unordered_map<std::string, Rule*> rulebook;
 std::unordered_map<std::string, Expr*> exprbook;
+std::unordered_set<char> special_chars = {'=', ':', '|', '{', '}', '"'};
 std::unordered_map<std::string, Token_Type> symbol_type_map = {
-    {"all", EXPR_MOD}, {"void", MOD}, {"dump", MOD}, {"over", EXPR_MOD}
+    {"all", EXPR_MOD}, {"void", MOD}, {"dump", MOD}, {"over", EXPR_MOD}, {"import", KEYWORD},
 };
-std::unordered_set<char> special_chars = {'=', ':', '|', '{', '}'};
 
-void print(std::vector<std::string> lines) {
+void print(const std::vector<std::string> lines) {
     for (std::string line: lines) std::cout << line << std::endl;
 }
 
@@ -85,8 +95,13 @@ void print_rulebook() {
     }
 }
 
-std::vector<std::string> read_file() {
+std::vector<std::string> read_file(const std::string filename) {
     std::ifstream fd(filename);
+    if (fd.fail()) {
+        std::cerr << "BAD FILE:: Filename `";
+        std::cerr << filename << "` specified does not exist" << std::endl;
+        exit(1);
+    }
     std::string line;
     std::vector<std::string> lines;
     while (getline(fd, line)) {
@@ -147,6 +162,11 @@ Statement parse_statement(const std::string line) {
             case '|': {
                 ++i;
                 tokens.push_back((Token){.type = PIPE, .str = "|"});
+                break;
+            }
+            case '"': {
+                ++i;
+                tokens.push_back((Token){.type = QUOTE, .str = "\""});
                 break;
             }
             default: {
@@ -223,6 +243,14 @@ Expr* parse_expr(std::string str) {
     };
 }
 
+void execute_import(const Statement statement) {
+    std::string filename = statement.tokens[2].str;
+    for (std::string line: read_file(filename)) {
+        Statement statement = parse_statement(line);
+        execute_statement(statement);
+    }
+}
+
 void execute_rule(const Statement statement) {
     std::string name = statement.tokens[0].str;
     Expr* left_expr = parse_expr(statement.tokens[2].str);
@@ -271,7 +299,8 @@ void execute_shape(const Statement statement) {
 }
 
 void execute_statement(const Statement statement) {
-    if (statement.match(RULE_SYNTAX)) execute_rule(statement);
+    if (statement.match(IMPORT_SYNTAX)) execute_import(statement);
+    else if (statement.match(RULE_SYNTAX)) execute_rule(statement);
     else if (statement.match(SHAPE_SYNTAX)) execute_shape(statement);
     else {
         std::cerr << statement.tostr() << std::endl;
@@ -281,9 +310,8 @@ void execute_statement(const Statement statement) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc > 1) filename = std::string(argv[1]);
-    std::vector<std::string> lines = read_file();
-    for (std::string line: lines) {
+    std::string filename = (argc > 1)? std::string(argv[1]): "sock.soq";
+    for (std::string line: read_file(filename)) {
         Statement statement = parse_statement(line);
         execute_statement(statement);   
     }
