@@ -13,7 +13,7 @@
 
 typedef enum {
     WALRUS, EQUAL, TEXT, OPEN_CB, CLOSE_CB, PIPE, 
-    MOD, EXPR_MOD, KEYWORD, QUOTE, BACK_SLASH, ANY,
+    MOD, EXPR_MOD, KEYWORD, QUOTE, SEMI_COLON, ANY,
 } Token_Type;
 
 typedef struct Token {
@@ -65,7 +65,6 @@ std::string Statement::tostr() const {
 }
 
 bool Statement::match(const std::vector<Token_Type> pattern) const {
-    if (this->tokens.size() < pattern.size()) return false;
     size_t i = 0;
     for (i; i < this->tokens.size() && pattern[i] != ANY; ++i)
         if (this->tokens[i].type != pattern[i]) return false;
@@ -78,7 +77,7 @@ bool Statement::match(const std::vector<Token_Type> pattern) const {
 std::vector<std::string> lines;
 std::unordered_map<std::string, Rule*> rulebook;
 std::unordered_map<std::string, Expr*> exprbook;
-std::unordered_set<char> special_chars = {'=', ':', '|', '{', '}', '"'};
+std::unordered_set<char> special_chars = {'=', ':', '|', '{', '}', '"', ';'};
 std::unordered_map<std::string, Token_Type> symbol_type_map = {
     {"all", EXPR_MOD}, {"void", MOD}, {"dump", MOD}, {"over", EXPR_MOD}, {"import", KEYWORD},
 };
@@ -167,6 +166,11 @@ Statement parse_statement(const std::string line) {
             case '"': {
                 ++i;
                 tokens.push_back((Token){.type = QUOTE, .str = "\""});
+                break;
+            }
+            case ';': {
+                ++i;
+                tokens.push_back((Token){.type = SEMI_COLON, .str = ";"});
                 break;
             }
             default: {
@@ -264,25 +268,27 @@ void execute_rule(const Statement statement) {
 void execute_shape(const Statement statement) {
     std::string name = statement.tokens[0].str;
     Expr* expr = parse_expr(statement.tokens[2].str);
-    std::string rulename = statement.tokens[4].str;
-    if (rulebook.find(rulename) == rulebook.end() && rulename != "?") {
-        std::cerr << statement.tostr() << std::endl;
-        std::cerr << "^^^ EXISTENTIAL CRISIS: Rule `" << rulename << "` does not exist" << std::endl;
-        exit(1);
+    for (size_t i = 4; i+3 < statement.tokens.size(); i += 4) {
+        std::string rulename = statement.tokens[i].str;
+        if (rulebook.find(rulename) == rulebook.end() && rulename != "?") {
+            std::cerr << statement.tostr() << std::endl;
+            std::cerr << "^^^ EXISTENTIAL CRISIS: Rule `" << rulename << "` does not exist" << std::endl;
+            exit(1);
+        }
+        std::string expr_mod = statement.tokens[i+2].str;
+        if (expr_mod == "all") {
+            if (rulename != "?") rulebook[rulename]->apply_all(expr);
+            else for (auto x: rulebook) x.second->apply_all(expr);
+        }
+        else if (expr_mod == "over") rulebook[rulename]->apply(expr);
+        else {
+            std::cerr << statement.tostr() << std::endl;
+            std::cerr << "^^^ INVALID EXPR MOD: Expression mod `";
+            std::cerr << statement.tokens[6].str << "` is not valid" << std::endl;
+            exit(1);
+        }
     }
-    std::string expr_mod = statement.tokens[6].str;
-    if (expr_mod == "all") {
-        if (rulename != "?") rulebook[rulename]->apply_all(expr);
-        else for (auto x: rulebook) x.second->apply_all(expr);
-    }
-    else if (expr_mod == "over") rulebook[rulename]->apply(expr);
-    else {
-        std::cerr << statement.tostr() << std::endl;
-        std::cerr << "^^^ INVALID EXPR MOD: Expression mod `";
-        std::cerr << statement.tokens[6].str << "` is not valid" << std::endl;
-        exit(1);
-    }
-    std::string mod = statement.tokens[8].str;
+    std::string mod = statement.tokens[statement.tokens.size()-1].str;
     if (mod == "void") return;
     else if (mod == "dump") {
         expr->print();

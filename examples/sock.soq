@@ -1,9 +1,10 @@
 import "examples/std.soq"
 
 expr := swap(pair(a, b)) {
-    swap | over
+    swap | over;
 } dump
 
 _ := swap(pair(f(x), lim(h, y, f(h)))) {
-    ? | all
+    swap | over;
+    lim  | all;
 } dump
