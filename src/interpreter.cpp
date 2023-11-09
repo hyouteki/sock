@@ -267,7 +267,9 @@ void execute_rule(const Statement statement) {
 
 void execute_shape(const Statement statement) {
     std::string name = statement.tokens[0].str;
-    Expr* expr = parse_expr(statement.tokens[2].str);
+    std::string expr_str = statement.tokens[2].str;
+    Expr* expr = (exprbook.find(expr_str) == exprbook.end())?
+         parse_expr(statement.tokens[2].str): exprbook[expr_str];
     for (size_t i = 4; i+3 < statement.tokens.size(); i += 4) {
         std::string rulename = statement.tokens[i].str;
         if (rulebook.find(rulename) == rulebook.end() && rulename != "?") {

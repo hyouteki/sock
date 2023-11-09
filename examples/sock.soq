@@ -8,3 +8,12 @@ _ := swap(pair(f(x), lim(h, y, f(h)))) {
     swap | over;
     lim  | all;
 } dump
+
+
+expr2 := swap(pair(f(x), lim(x, a, f(x)))) {
+    swap | over;
+} void
+
+expr2 := expr2 {
+    ? | all;
+} dump
