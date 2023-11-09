@@ -284,20 +284,19 @@ void execute_shape(const Statement statement) {
         else {
             std::cerr << statement.tostr() << std::endl;
             std::cerr << "^^^ INVALID EXPR MOD: Expression mod `";
-            std::cerr << statement.tokens[6].str << "` is not valid" << std::endl;
+            std::cerr << expr_mod << "` is not valid" << std::endl;
             exit(1);
         }
     }
     std::string mod = statement.tokens[statement.tokens.size()-1].str;
-    if (mod == "void") return;
+    if (mod == "void");
     else if (mod == "dump") {
         expr->print();
         std::cout << std::endl;
     }
     else {
         std::cerr << statement.tostr() << std::endl;
-        std::cerr << "^^^ INVALID MOD: Mod `";
-        std::cerr << statement.tokens[8].str << "` is not valid" << std::endl;
+        std::cerr << "^^^ INVALID MOD: Mod `" << mod << "` is not valid" << std::endl;
         exit(1);
     }
     if (name == "_") return;
