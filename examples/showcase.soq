@@ -15,3 +15,13 @@ expr := swap(pair(a, b)) { # this a shape
 # one such modifier is `all`; it applies the rule recursively to the expression.
 # read more about them in the documentation present in the wiki
 # dump is used to dump the result to standard output; use void if you don't wont to
+
+# you can define macros as such 
+@swapAll := swap | all;
+
+# use macros by placing @ in front of the name
+expr := swap(pair(a, b)) { @swapAll } dump
+
+# there are macros present for the numbers [1, 5]
+# also for basic arithmatic operations
+_ := add(@1, @2) @add $dump

@@ -6,5 +6,8 @@ build:
 run:
 + @./bin/interpreter examples/sock.soq
 
+sock: $(filter-out $@,$(MAKECMDGOALS))
++ @./bin/interpreter $<
+
 clean:
 + @del /q "bin\*"

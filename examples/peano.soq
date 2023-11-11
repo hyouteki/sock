@@ -1,0 +1,3 @@
+import "examples/std.soq"
+
+_ := add(@3, @4) @add $dump

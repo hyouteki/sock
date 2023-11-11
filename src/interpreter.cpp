@@ -12,7 +12,7 @@
 #include "sock_enr.cpp"
 
 typedef enum {
-    WALRUS, EQUAL, TEXT, OPEN_CB, CLOSE_CB, PIPE, 
+    WALRUS, EQUAL, TEXT, OPEN_CB, CLOSE_CB, PIPE, AT,
     MOD, EXPR_MOD, KEYWORD, QUOTE, SEMI_COLON, ANY,
 } Token_Type;
 
@@ -34,16 +34,20 @@ public:
 #define RULE_SYNTAX {TEXT, WALRUS, TEXT, EQUAL, TEXT}
 #define SHAPE_SYNTAX {TEXT, WALRUS, TEXT, OPEN_CB, ANY, CLOSE_CB, MOD}
 #define IMPORT_SYNTAX {KEYWORD, QUOTE, TEXT, QUOTE}
+#define MACRO_SYNTAX {AT, TEXT, WALRUS, ANY}
 
 void print(const std::vector<std::string>);
 void print_rulebook();
 std::vector<std::string> read_file(const std::string);
 std::string tokenize_join(const std::string, const char);
 Statement parse_statement(const std::string);
+Statement expand_macros(const Statement statement);
+Statement merge_text(const Statement statement);
 Expr* parse_expr(std::string);
 void execute_import(const Statement); 
 void execute_rule(const Statement);
 void execute_shape(const Statement);
+void execute_macro(const Statement);
 void execute_statement(const Statement);
 
 void Token::print() const {
@@ -77,10 +81,26 @@ bool Statement::match(const std::vector<Token_Type> pattern) const {
 std::vector<std::string> lines;
 std::unordered_map<std::string, Rule*> rulebook;
 std::unordered_map<std::string, Expr*> exprbook;
-std::unordered_set<char> special_chars = {'=', ':', '|', '{', '}', '"', ';'};
+std::unordered_map<std::string, std::string> macros;
+std::unordered_set<char> special_chars = {'=', ':', '|', '{', '}', '"', ';', '@', '$'};
 std::unordered_map<std::string, Token_Type> symbol_type_map = {
-    {"all", EXPR_MOD}, {"void", MOD}, {"dump", MOD}, {"over", EXPR_MOD}, {"import", KEYWORD},
+    {"all", EXPR_MOD}, {"void", MOD}, {"dump", MOD}, 
+    {"$dump", MOD}, {"over", EXPR_MOD}, {"import", KEYWORD},
 };
+
+std::string replaceString(
+    const std::string initial, 
+    const std::string target, 
+    const std::string replacement
+) {
+    std::string result = initial;
+    size_t pos = 0;
+    while ((pos = result.find(target, pos)) != std::string::npos) {
+        result.replace(pos, target.length(), replacement);
+        pos += replacement.length();
+    }
+    return result;
+}
 
 void print(const std::vector<std::string> lines) {
     for (std::string line: lines) std::cout << line << std::endl;
@@ -113,7 +133,7 @@ std::vector<std::string> read_file(const std::string filename) {
             line = tmp;
         }
         if (line.size() == 0) continue;
-        if (line.find("{") != std::string::npos) {
+        if (line.find("{") != std::string::npos && line.find("}") == std::string::npos) {
             std::string tmp(line);
             while (getline(fd, line)) {
                 if (line.find("#") != std::string::npos) {
@@ -148,6 +168,7 @@ Statement parse_statement(const std::string line) {
     while (i < tmp.size()) {
         char ch = tmp[i];
         switch (ch) {
+            case ' ': {break;}
             case '=': {
                 ++i;
                 tokens.push_back((Token){.type = EQUAL, .str = "="});
@@ -184,9 +205,28 @@ Statement parse_statement(const std::string line) {
                 tokens.push_back((Token){.type = QUOTE, .str = "\""});
                 break;
             }
+            case '@': {
+                tokens.push_back((Token){.type = AT, .str = "@"});
+                ++i;
+                std::string symbol = "";
+                for (i; i < tmp.size() && isalnum(tmp[i]); ++i)
+                    symbol.push_back(tmp[i]);
+                tokens.push_back((Token){.type = TEXT, .str = symbol});
+                break;
+            }
             case ';': {
                 ++i;
                 tokens.push_back((Token){.type = SEMI_COLON, .str = ";"});
+                break;
+            }
+            case '$': {
+                ++i;
+                std::string symbol = "$";
+                for (i; i < tmp.size() && special_chars.find(tmp[i]) == special_chars.end(); ++i)
+                    symbol.push_back(tmp[i]);
+                if (symbol_type_map.find(symbol) != symbol_type_map.end())
+                    tokens.push_back((Token){.type = symbol_type_map[symbol], .str = symbol});
+                else tokens.push_back((Token){.type = TEXT, .str = symbol});
                 break;
             }
             default: {
@@ -198,6 +238,35 @@ Statement parse_statement(const std::string line) {
                 else tokens.push_back((Token){.type = TEXT, .str = symbol});
             }
         }
+    }
+    return (Statement){.tokens = tokens};
+}
+
+Statement expand_macros(const Statement statement) {
+    std::vector<Token> tokens;
+    size_t i = 0;
+    while (i < statement.tokens.size()) {
+        Token token = statement.tokens[i];
+        if (token.type != AT) {
+            tokens.push_back(token);
+            ++i;
+            continue;
+        }
+        std::string macro_name = statement.tokens[i+1].str;
+        Statement expanded = parse_statement(macros[macro_name]);
+        expanded = expand_macros(expanded);
+        for (Token x: expanded.tokens) tokens.push_back(x);
+        i += 2;
+    }
+    return (Statement){.tokens = tokens};
+}
+
+Statement merge_text(const Statement statement) {
+    std::vector<Token> tokens;
+    for (size_t i = 0; i < statement.tokens.size(); ++i) {
+        if (statement.tokens[i].type == TEXT && i > 0 && tokens[tokens.size()-1].type == TEXT)
+            tokens[tokens.size()-1].str += statement.tokens[i].str;
+        else tokens.push_back(statement.tokens[i]);
     }
     return (Statement){.tokens = tokens};
 }
@@ -267,6 +336,8 @@ void execute_import(const Statement statement) {
     std::string filename = statement.tokens[2].str;
     for (std::string line: read_file(filename)) {
         Statement statement = parse_statement(line);
+        if (!statement.match(MACRO_SYNTAX)) statement = expand_macros(statement);
+        statement = merge_text(statement);
         execute_statement(statement);
     }
 }
@@ -312,6 +383,9 @@ void execute_shape(const Statement statement) {
         expr->print();
         std::cout << std::endl;
     }
+    else if (mod == "$dump") {
+        std::cout << expr->value() << std::endl;
+    }
     else {
         std::cerr << statement.tostr() << std::endl;
         std::cerr << "^^^ INVALID MOD: Mod `" << mod << "` is not valid" << std::endl;
@@ -321,10 +395,19 @@ void execute_shape(const Statement statement) {
     else exprbook[name] = expr;
 }
 
+void execute_macro(const Statement statement) {
+    std::string name = statement.tokens[1].str;
+    std::string val = "";
+    for (size_t i = 3; i < statement.tokens.size(); ++i) 
+        val += statement.tokens[i].str;
+    macros[name] = val;
+}
+
 void execute_statement(const Statement statement) {
     if (statement.match(IMPORT_SYNTAX)) execute_import(statement);
     else if (statement.match(RULE_SYNTAX)) execute_rule(statement);
     else if (statement.match(SHAPE_SYNTAX)) execute_shape(statement);
+    else if (statement.match(MACRO_SYNTAX)) execute_macro(statement);
     else {
         std::cerr << statement.tostr() << std::endl;
         std::cerr << "^^^ SYNTAX ERROR: Does not match any pattern" << std::endl;
@@ -336,7 +419,9 @@ int main(int argc, char* argv[]) {
     std::string filename = (argc > 1)? std::string(argv[1]): "sock.soq";
     for (std::string line: read_file(filename)) {
         Statement statement = parse_statement(line);
-        execute_statement(statement);   
+        if (!statement.match(MACRO_SYNTAX)) statement = expand_macros(statement);
+        statement = merge_text(statement);
+        execute_statement(statement); 
     }
     return 0;
 }

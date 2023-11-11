@@ -1,2 +1,15 @@
+# peano axioms
+add := add(s(num1), num2) = s(add(num1, num2))
+add0 := add(0, num2) = num2
+
+# macros
+@1 := s(0)
+@2 := s(s(0))
+@3 := s(s(s(0)))
+@4 := s(s(s(s(0))))
+@5 := s(s(s(s(s(0)))))
+@add := {add | all; add0 | all;}
+
+# basic rules
 swap := swap(pair(a, b)) = pair(b, a)
 lim := lim(x, a, f(x)) = f(a) 

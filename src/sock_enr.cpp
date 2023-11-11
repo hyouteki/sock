@@ -25,6 +25,7 @@ public:
     std::optional<std::unordered_map<std::string, Expr>> match(const Expr*) const;
     void apply(std::unordered_map<std::string, Expr> bindings);
     Expr clone() const;
+    int value() const;
 private:
     bool match_helper(
         const Expr*, 
@@ -152,6 +153,27 @@ Expr Expr::clone() const {
     for (Expr arg: this->args)
         new_expr.args.push_back(arg.clone());
     return new_expr;
+}
+
+int Expr::value() const {
+    Expr tmp = this->clone();
+    int val = 0;
+    bool flag = true;
+    while (flag) {
+        switch (tmp.type) {
+            case (Sym): {
+                flag = false;
+                break;
+            }
+            case (Fun): {
+                if (tmp.args.size() == 0) flag == false;
+                else tmp = tmp.args[0];
+                ++val;
+                break;
+            }
+        }
+    }
+    return val;
 }
 
 std::optional<std::unordered_map<std::string, Expr>> Expr::match(const Expr* expr) const {
