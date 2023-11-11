@@ -104,10 +104,26 @@ std::vector<std::string> read_file(const std::string filename) {
     std::string line;
     std::vector<std::string> lines;
     while (getline(fd, line)) {
-        if (line.size() == 0) continue; 
+        if (line.find("#") != std::string::npos) {
+            std::string tmp = "";
+            for (char ch: line) {
+                if (ch != '#') tmp.push_back(ch);
+                else break;
+            }  
+            line = tmp;
+        }
+        if (line.size() == 0) continue;
         if (line.find("{") != std::string::npos) {
             std::string tmp(line);
             while (getline(fd, line)) {
+                if (line.find("#") != std::string::npos) {
+                    std::string tmp2 = "";
+                    for (char ch: line) {
+                        if (ch != '#') tmp2.push_back(ch);
+                        else break;
+                    }  
+                    line = tmp2;
+                }
                 tmp += line;
                 if (line.find("}") != std::string::npos) break;
             }

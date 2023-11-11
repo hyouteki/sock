@@ -1,7 +1,9 @@
 import "examples/std.soq"
 
+# this is a comment
+
 expr := swap(pair(a, b)) {
-    swap | over;
+    swap | over; # this is inline comment
 } dump
 
 _ := swap(pair(f(x), lim(h, y, f(h)))) {

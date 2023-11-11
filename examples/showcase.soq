@@ -1,0 +1,17 @@
+# WELCOME TO SOCK SHOWCASE
+
+# use import to include everything from other sock file
+import "examples/std.soq"
+
+# you can not stand alone define an expression; but you can use them in rules and shapes
+
+switchParen := switch(pair(a, b), c) = switch(a, pair(b, c)) # this is a rule 
+# rules describe how can transform an expression into another
+
+expr := swap(pair(a, b)) { # this a shape
+    swap | all;
+} dump
+# shapes apply rules to an expression; you can describe how to apply the rules using modifiers
+# one such modifier is `all`; it applies the rule recursively to the expression.
+# read more about them in the documentation present in the wiki
+# dump is used to dump the result to standard output; use void if you don't wont to
